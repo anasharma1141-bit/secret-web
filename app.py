@@ -19,7 +19,7 @@ cloudinary.config(
 )
 
 # Database
-conn = sqlite3.connect("final.db", check_same_thread=False)
+conn = sqlite3.connect("//tmp/final.db", check_same_thread=False)
 cursor = conn.cursor()
 
 cursor.execute("CREATE TABLE IF NOT EXISTS photos (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT, public_id TEXT, type TEXT)")
