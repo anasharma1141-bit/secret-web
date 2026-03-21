@@ -1,12 +1,13 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, session
 import cloudinary
 import cloudinary.uploader
 import sqlite3
 import os
 
 app = Flask(__name__)
+app.secret_key = "secret123"
 
-# 🔐 Hidden password + answer
+# 🔐 Password + Answer
 PASSWORD = "9999"
 ANSWER = "mydog"
 
@@ -31,9 +32,27 @@ hidden INTEGER DEFAULT 0
 """)
 conn.commit()
 
-# MAIN VAULT
+# 🔐 MAIN (PASSWORD PROTECT)
 @app.route("/", methods=["GET","POST"])
 def vault():
+
+    # login check
+    if not session.get("access"):
+        if request.method=="POST":
+            if request.form["password"] == PASSWORD:
+                session["access"] = True
+                return redirect("/")
+        
+        return '''
+        <h2>🔐 Enter Vault Password</h2>
+        <form method="post">
+        <input type="password" name="password"><br><br>
+        <button>Enter</button>
+        </form>
+        <br><a href="/forgot">Forgot Password</a>
+        '''
+
+    # upload
     if request.method=="POST":
         file = request.files["file"]
         if file:
@@ -51,7 +70,7 @@ def vault():
     <input type="file" name="file"><br><br>
     <button>Upload</button>
     </form><br>
-    <a href="/forgot">Forgot Password</a><br><br>
+    <a href="/logout">Logout</a><br><br>
     '''
 
     for row in data:
@@ -110,7 +129,7 @@ def unlock(id):
             return "❌ Wrong Password"
 
     return '''
-    <h2>Enter Password</h2>
+    <h2>Enter Hidden Password</h2>
     <form method="post">
     <input type="password" name="password"><br><br>
     <button>Open</button>
@@ -125,6 +144,7 @@ def forgot():
     if request.method=="POST":
         if request.form["answer"] == ANSWER:
             PASSWORD = request.form["password"]
+            session.clear()
             return "✅ Password Changed <br><a href='/'>Back</a>"
         else:
             return "❌ Wrong Answer"
@@ -137,6 +157,12 @@ def forgot():
     <button>Reset</button>
     </form>
     '''
+
+# LOGOUT
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
 
 # RUN
 if __name__ == "__main__":
