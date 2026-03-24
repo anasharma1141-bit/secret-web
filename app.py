@@ -32,17 +32,18 @@ hidden INTEGER DEFAULT 0
 """)
 conn.commit()
 
-# 🔐 MAIN (PASSWORD PROTECT)
+# 🔐 MAIN (ALWAYS ASK PASSWORD)
 @app.route("/", methods=["GET","POST"])
 def vault():
 
-    # login check
+    # 👉 ALWAYS ASK PASSWORD (NO SESSION BYPASS)
+    if request.method == "POST" and "password" in request.form:
+        if request.form["password"] == PASSWORD:
+            session["access"] = True
+        else:
+            return "❌ Wrong Password"
+
     if not session.get("access"):
-        if request.method=="POST":
-            if request.form["password"] == PASSWORD:
-                session["access"] = True
-                return redirect("/")
-        
         return '''
         <h2>🔐 Enter Vault Password</h2>
         <form method="post">
@@ -52,13 +53,15 @@ def vault():
         <br><a href="/forgot">Forgot Password</a>
         '''
 
-    # upload
-    if request.method=="POST":
+    # 👉 UPLOAD
+    if request.method == "POST" and "file" in request.files:
         file = request.files["file"]
         if file:
             r = cloudinary.uploader.upload(file)
-            cursor.execute("INSERT INTO photos (url, public_id, hidden) VALUES (?,?,0)",
-                           (r["secure_url"], r["public_id"]))
+            cursor.execute(
+                "INSERT INTO photos (url, public_id, hidden) VALUES (?,?,0)",
+                (r["secure_url"], r["public_id"])
+            )
             conn.commit()
 
     cursor.execute("SELECT * FROM photos")
@@ -93,17 +96,17 @@ def vault():
 
             <script>
             let st{row[0]}=0;
-            document.getElementById("s{row[0]}").addEventListener("touchstart",e=>{{
+            document.getElementById("s{row[0]}").addEventListener("touchstart",e=>{
                 st{row[0]}=e.touches[0].clientY;
-            }});
-            document.getElementById("s{row[0]}").addEventListener("touchmove",e=>{{
+            });
+            document.getElementById("s{row[0]}").addEventListener("touchmove",e=>{
                 let d=e.touches[0].clientY-st{row[0]};
-                if(d>0){{
+                if(d>0){
                     let p=Math.min(d,100);
                     document.getElementById("b{row[0]}").style.width=p+"%";
                     if(p>80) window.location="/unlock/{row[0]}";
-                }}
-            }});
+                }
+            });
             </script><br><br>
             """
 
@@ -137,7 +140,7 @@ def unlock(id):
     <br><a href="/forgot">Forgot Password</a>
     '''
 
-# FORGOT PASSWORD (WITH ANSWER)
+# FORGOT PASSWORD
 @app.route("/forgot", methods=["GET","POST"])
 def forgot():
     global PASSWORD
