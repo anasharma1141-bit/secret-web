@@ -9,7 +9,7 @@ app.secret_key = "secret123"
 
 # 🔐 Password + Answer
 PASSWORD = "9999"
-ANSWER = "mydog"
+ANSWER = "kota"
 
 # Cloudinary
 cloudinary.config(
